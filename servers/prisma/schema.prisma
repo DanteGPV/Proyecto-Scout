@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Actividad {
+  id            BigInt          @id @default(autoincrement())
+  id_tipo       Int
+  fecha_inicio  DateTime?       @db.Date
+  fecha_fin     DateTime?       @db.Date
+  descripcion   String?         @map("descripción")
+  creado_desde  DateTime        @default(now()) @db.Timestamp(6)
+  TipoActividad TipoActividad   @relation(fields: [id_tipo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_tipo")
+  ActividadRama ActividadRama[]
+  Tarea         Tarea[]
+}
+
+model ActividadRama {
+  id           BigInt    @id @default(autoincrement())
+  id_actividad BigInt
+  id_rama      Int
+  Actividad    Actividad @relation(fields: [id_actividad], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_actividad")
+  Rama         Rama      @relation(fields: [id_rama], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rama")
+}
+
+model ApodoSugerido {
+  id           Int            @id @default(autoincrement())
+  id_rama      Int
+  apodo        String         @db.VarChar(100)
+  Rama         Rama           @relation(fields: [id_rama], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rama")
+  MiembroApodo MiembroApodo[]
+}
+
+model Equipo {
+  id            BigInt          @id @default(autoincrement())
+  nombre        String?         @db.VarChar(100)
+  descripcion   String?         @map("descripción")
+  creado_desde  DateTime        @default(now()) @db.Timestamp(6)
+  MiembroEquipo MiembroEquipo[]
+  Tarea         Tarea[]
+}
+
+model Especialidad {
+  id                  Int                   @id @default(autoincrement())
+  id_rama             Int
+  nombre_especialidad String                @db.VarChar(100)
+  Rama                Rama                  @relation(fields: [id_rama], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rama")
+  MiembroEspecialidad MiembroEspecialidad[]
+}
+
+model Insignia {
+  id              Int               @id @default(autoincrement())
+  id_rama         Int
+  id_tipo         Int
+  nombre          String            @db.VarChar(100)
+  Rama            Rama              @relation(fields: [id_rama], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rama")
+  TipoInsignia    TipoInsignia      @relation(fields: [id_tipo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_tipo")
+  MiembroInsignia MiembroInsignia[]
+}
+
+model Miembro_Scout {
+  id                                           BigInt                @id @default(autoincrement())
+  DNI                                          Int                   @unique(map: "DNI_único")
+  nombre                                       String                @db.VarChar(100)
+  apellido                                     String                @db.VarChar(100)
+  id_rama                                      Int?
+  id_organismo                                 BigInt
+  apodo                                        String?               @db.VarChar(100)
+  promesa                                      Boolean
+  creado_desde                                 DateTime              @default(now()) @db.Timestamp(6)
+  fecha_nacimiento                             DateTime              @db.Date
+  organismo                                    organismo             @relation(fields: [id_organismo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_organismo")
+  Rama                                         Rama?                 @relation(fields: [id_rama], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rama")
+  MiembroApodo                                 MiembroApodo[]
+  MiembroEquipo                                MiembroEquipo[]
+  MiembroEspecialidad                          MiembroEspecialidad[]
+  MiembroInsignia                              MiembroInsignia[]
+  MiembroRol                                   MiembroRol[]
+  Subgrupo_Subgrupo_id_liderToMiembro_Scout    Subgrupo[]            @relation("Subgrupo_id_liderToMiembro_Scout")
+  Subgrupo_Subgrupo_id_subliderToMiembro_Scout Subgrupo[]            @relation("Subgrupo_id_subliderToMiembro_Scout")
+  TareaMiembro                                 TareaMiembro[]
+  Usuario                                      Usuario[]
+
+  @@map("Miembro Scout")
+}
+
+model MiembroApodo {
+  id                BigInt         @id @default(autoincrement())
+  id_miembro        BigInt
+  apodo             String         @db.VarChar(100)
+  id_apodo_sugerido Int?
+  ApodoSugerido     ApodoSugerido? @relation(fields: [id_apodo_sugerido], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_apodo_sugerido")
+  Miembro_Scout     Miembro_Scout  @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
+}
+
+model MiembroEquipo {
+  id            BigInt        @id @default(autoincrement())
+  id_miembro    BigInt
+  id_equipo     BigInt
+  Equipo        Equipo        @relation(fields: [id_equipo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_equipo")
+  Miembro_Scout Miembro_Scout @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
+}
+
+model MiembroEspecialidad {
+  id               BigInt            @id @default(autoincrement())
+  id_miembro       BigInt
+  id_especialidad  Int
+  id_fase          Int?
+  fecha_obtenida   DateTime          @default(now()) @db.Timestamp(6)
+  Especialidad     Especialidad      @relation(fields: [id_especialidad], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_especialidad")
+  faseEspecialidad faseEspecialidad? @relation(fields: [id_fase], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_fase")
+  Miembro_Scout    Miembro_Scout     @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
+
+  @@unique([id_miembro, id_especialidad], map: "Especialidad una vez, para cada miembro")
+}
+
+model MiembroInsignia {
+  id             BigInt        @id @default(autoincrement())
+  id_miembro     BigInt
+  id_insignia    Int
+  fecha_obtenida DateTime      @default(now()) @db.Timestamp(6)
+  Insignia       Insignia      @relation(fields: [id_insignia], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_insignia")
+  Miembro_Scout  Miembro_Scout @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
+}
+
+model MiembroRol {
+  id            BigInt        @id @default(autoincrement())
+  id_miembro    BigInt
+  id_rol        Int
+  fecha_desde   DateTime      @db.Date
+  fecha_hasta   DateTime?     @db.Date
+  Miembro_Scout Miembro_Scout @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
+  rol           rol           @relation(fields: [id_rol], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rol")
+}
+
+model Rama {
+  id            Int             @id @default(autoincrement())
+  nombre        String          @db.VarChar(100)
+  ActividadRama ActividadRama[]
+  ApodoSugerido ApodoSugerido[]
+  Especialidad  Especialidad[]
+  Insignia      Insignia[]
+  Miembro_Scout Miembro_Scout[]
+  Subgrupo      Subgrupo[]
+  rol           rol[]
+}
+
+model Subgrupo {
+  id                                                BigInt         @id @default(autoincrement())
+  nombre                                            String         @db.VarChar(100)
+  id_rama                                           Int
+  id_lider                                          BigInt?
+  id_sublider                                       BigInt?
+  creado_desde                                      DateTime       @default(now()) @db.Timestamp(6)
+  Miembro_Scout_Subgrupo_id_liderToMiembro_Scout    Miembro_Scout? @relation("Subgrupo_id_liderToMiembro_Scout", fields: [id_lider], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_lider")
+  Rama                                              Rama           @relation(fields: [id_rama], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rama")
+  Miembro_Scout_Subgrupo_id_subliderToMiembro_Scout Miembro_Scout? @relation("Subgrupo_id_subliderToMiembro_Scout", fields: [id_sublider], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_sublider")
+}
+
+model Tarea {
+  id           BigInt         @id @default(autoincrement())
+  id_actividad BigInt?
+  id_equipo    BigInt?
+  nombre       String         @db.VarChar(100)
+  descripcion  String?        @map("descripción")
+  fecha_inicio DateTime?      @db.Date
+  fecha_limite DateTime?      @db.Date
+  completada   Boolean?       @default(false)
+  creado_desde DateTime       @default(now()) @db.Timestamp(6)
+  Actividad    Actividad?     @relation(fields: [id_actividad], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_actividad")
+  Equipo       Equipo?        @relation(fields: [id_equipo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_equipo")
+  TareaMiembro TareaMiembro[]
+}
+
+model TareaMiembro {
+  id            BigInt        @id @default(autoincrement())
+  id_tarea      BigInt
+  id_miembro    BigInt
+  completada    Boolean?      @default(false)
+  creado_desde  DateTime      @default(now()) @db.Timestamp(6)
+  Miembro_Scout Miembro_Scout @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
+  Tarea         Tarea         @relation(fields: [id_tarea], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_tarea")
+}
+
+model TipoActividad {
+  id        Int         @id @default(autoincrement())
+  Nombre    String      @db.VarChar(100)
+  Actividad Actividad[]
+}
+
+model TipoInsignia {
+  id       Int        @id @default(autoincrement())
+  nombre   String     @db.VarChar(100)
+  Insignia Insignia[]
+}
+
+model Usuario {
+  id                      BigInt        @id @default(autoincrement())
+  id_miembro              BigInt
+  email                   String        @unique(map: "email_único") @db.VarChar(255)
+  hash_contrasena         String        @map("hash_contraseña") @db.VarChar(255)
+  fecha_creacion          DateTime      @default(now()) @map("fecha_creación") @db.Timestamp(6)
+  ultimo_login            DateTime?     @map("último_login") @db.Timestamp(6)
+  debe_cambiar_contrasena Boolean?      @default(true) @map("debe_cambiar_contraseña")
+  Miembro_Scout           Miembro_Scout @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
+}
+
+model faseEspecialidad {
+  id                  Int                   @id @default(autoincrement())
+  nombre_fase         String                @db.VarChar(100)
+  MiembroEspecialidad MiembroEspecialidad[]
+}
+
+model organismo {
+  id            BigInt          @id @default(autoincrement())
+  nombre        String          @db.VarChar(100)
+  created_at    DateTime        @default(now()) @db.Timestamp(6)
+  Miembro_Scout Miembro_Scout[]
+}
+
+model rol {
+  id         Int          @id @default(autoincrement())
+  nombre     String       @db.VarChar(100)
+  id_rama    Int?
+  MiembroRol MiembroRol[]
+  Rama       Rama?        @relation(fields: [id_rama], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rama")
+}

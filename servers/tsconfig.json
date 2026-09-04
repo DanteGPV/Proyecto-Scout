@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    // Entorno
+    "module": "commonjs",
+    "target": "es2020",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "lib": ["esnext"],
+    "types": ["node"],
+
+    // Archivos
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Verificaciones
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Otros
+    "sourceMap": true
+  },
+    "include": ["src/**/*"]
+}
