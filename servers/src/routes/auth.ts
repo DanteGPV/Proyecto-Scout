@@ -69,7 +69,7 @@ router.post("/usuarios", async(req, res)=>{
 
 router.post("/login", async(req, res)=>{
     try{
-        const {email, password} = req.body;
+        const {email, password} = req.body; //obtengo el email y la contraseña del body del request
 
         const usuario = await prisma.usuario.findUnique({where:{email}});
 

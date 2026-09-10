@@ -73,6 +73,7 @@ model Miembro_Scout {
   promesa                                      Boolean
   creado_desde                                 DateTime              @default(now()) @db.Timestamp(6)
   fecha_nacimiento                             DateTime              @db.Date
+  activo                                       Boolean               @default(true)
   organismo                                    organismo             @relation(fields: [id_organismo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_organismo")
   Rama                                         Rama?                 @relation(fields: [id_rama], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rama")
   MiembroApodo                                 MiembroApodo[]
