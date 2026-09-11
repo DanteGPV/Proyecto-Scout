@@ -7,7 +7,7 @@ import { verificarToken } from "../middleware/auth_middleware"; //importo el mid
 const router = Router(); //creo el router de express para poder crear rutas
 const prisma = new PrismaClient(); //creo el cliente de prisma para poder hacer consultas a la base de datos
 
-router.post("/usuarios", async(req, res)=>{
+router.post("/usuarios", async(req, res, next)=>{
     try{
         //indico los datos del body del request (Después usamos fetch aparentemente)
         const {
@@ -60,14 +60,13 @@ router.post("/usuarios", async(req, res)=>{
         });
 
     }catch(error){
-        console.error(error);
-        res.status(400).json({error: "No se pudo crear el Miembro Scout"});
+        next(error);
     }
     
 
 });
 
-router.post("/login", async(req, res)=>{
+router.post("/login", async(req, res, next)=>{
     try{
         const {email, password} = req.body; //obtengo el email y la contraseña del body del request
 
@@ -95,11 +94,11 @@ router.post("/login", async(req, res)=>{
             debeCambiarContraseña: usuario.debe_cambiar_contrasena,
         })
     }catch(error){
-        res.status(500).json({error: "Error en el servidor"});
+        next(error);
     }
 });
 
-router.post("/cambiar-clave",verificarToken, async(req,res)=>{
+router.post("/cambiar-clave",verificarToken, async(req,res, next)=>{
     try{    
     const {id} = (req as any).usuario;
     const {contraseñaActual, nuevaContraseña}= req.body;
@@ -128,8 +127,7 @@ router.post("/cambiar-clave",verificarToken, async(req,res)=>{
 
     res.json({ok:true});
 }catch(error){
-    console.error(error);
-    res.status(500).json({error: "Error al cambiar la contraseña"});
+    next(error);
 }
 
 });
