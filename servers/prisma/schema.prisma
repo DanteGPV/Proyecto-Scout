@@ -141,6 +141,8 @@ model MiembroRol {
 model Rama {
   id            Int             @id @default(autoincrement())
   nombre        String          @db.VarChar(100)
+  edad_minima   Int
+  edad_maxima   Int
   ActividadRama ActividadRama[]
   ApodoSugerido ApodoSugerido[]
   Especialidad  Especialidad[]

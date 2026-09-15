@@ -3,6 +3,7 @@ import bcrypt from "bcrypt"; //para hashear contraseñas
 import { Router } from "express"; //importo el router de express para poder crear rutas
 import jwt from "jsonwebtoken"; //para generar tokens de autenticación
 import { verificarToken } from "../middleware/auth_middleware"; //importo el middleware para verificar el token de autenticación
+import { validarEdadParaRama } from "../utils/validarEdadRama";
 
 const router = Router(); //creo el router de express para poder crear rutas
 const prisma = new PrismaClient(); //creo el cliente de prisma para poder hacer consultas a la base de datos
@@ -22,6 +23,11 @@ router.post("/usuarios", async(req, res, next)=>{
         contraseñaTemporal,
         } = req.body;
 
+        const errorEdad = await validarEdadParaRama(Number(id_rama), new Date(fecha_nacimiento));
+        if (errorEdad) {
+          return res.status(400).json({ error: errorEdad });
+        }
+        
         //Creo el hash para la contraseña temporal que dió el Jefe Scout al usuario
         const hash = await bcrypt.hash(contraseñaTemporal, 10);
 

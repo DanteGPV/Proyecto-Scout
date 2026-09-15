@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { Router } from "express";
 import { verificarToken } from "../middleware/auth_middleware";
+import { validarEdadParaRama } from "../utils/validarEdadRama";
+
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -9,6 +11,7 @@ const miembroBasico ={
     id:true,
     nombre:true, 
     apellido:true,
+    dni:true,
     activo:true,
     apodo:true,
     Rama:{select:{nombre:true}},
@@ -18,13 +21,15 @@ const miembroBasico ={
 // Ruta para buscar miembros con filtros opcionales
 router.get("/", verificarToken, async(req,res, next)=>{
     try{ 
-        const{nombre, apellido, id_rama, id_organismo, estado, pagina, porPagina}= req.query;
+        const{nombre, apellido, dni, id_rama, id_organismo, estado, pagina, porPagina}= req.query;
 
         const where: any = {}; // crear un objeto vacío para almacenar las condiciones de búsqueda
 
         if (nombre)  {where.nombre = {contains: String(nombre), mode: "insensitive"};}
 
         if(apellido){where.apellido = {contains:String(apellido), mode : "insensitive"};}
+
+        if(dni){where.dni = {contains:String(dni), mode:"insensitive"};}
 
         if (id_rama) {where.id_rama = Number(id_rama);}// Filtrar por id de rama
         
@@ -87,13 +92,34 @@ router.patch("/:id", verificarToken, async(req,res, next)=>{
     try {
         const id = Number(req.params.id); // Obtener el ID del miembro de los parámetros de la ruta
 
-        const{nombre, apellido, fecha_nacimiento, id_rama, id_organismo, promesa, apodo}= req.body;
+        const{nombre, apellido, dni, fecha_nacimiento, id_rama, id_organismo, promesa, apodo}= req.body;
+
+        // Validar la edad del miembro si se proporciona id_rama o fecha_nacimiento
+        if (id_rama !== undefined || fecha_nacimiento !== undefined) {
+            const miembroActual = await prisma.miembro_Scout.findUniqueOrThrow({
+                where: { id },
+                select: { id_rama: true, fecha_nacimiento: true },
+            });
+
+            const ramaFinal = id_rama !== undefined ? Number(id_rama) : miembroActual.id_rama;
+            const fechaFinal = fecha_nacimiento !== undefined
+                ? new Date(fecha_nacimiento)
+                : miembroActual.fecha_nacimiento;
+
+            if (ramaFinal !== null) {
+                const errorEdad = await validarEdadParaRama(ramaFinal, fechaFinal);
+                if (errorEdad) {
+                return res.status(400).json({ error: errorEdad });
+                }
+            }
+        }
 
         const data:any={};
 
         // Actualizar solo los campos que se proporcionan en el cuerpo de la solicitud
         if(nombre !== undefined){data.nombre = nombre;}
         if(apellido!== undefined){data.apellido = apellido;}
+        if(dni!== undefined){data.dni = dni;}
         if(fecha_nacimiento!== undefined){data.fecha_nacimiento = new Date(fecha_nacimiento);}
         if(id_rama!== undefined){data.id_rama = Number(id_rama);}
         if(id_organismo!== undefined){data.id_organismo = BigInt(id_organismo);}
