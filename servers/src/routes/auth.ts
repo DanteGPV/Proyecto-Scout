@@ -3,10 +3,12 @@ import bcrypt from "bcrypt"; //para hashear contraseñas
 import { Router } from "express"; //importo el router de express para poder crear rutas
 import jwt from "jsonwebtoken"; //para generar tokens de autenticación
 import { verificarToken } from "../middleware/auth_middleware"; //importo el middleware para verificar el token de autenticación
+import { calcularFortalezaPassword, validarFortalezaPassword } from "../utils/auth_utils";
 import { validarEdadParaRama } from "../utils/validarEdadRama";
 
 const router = Router(); //creo el router de express para poder crear rutas
 const prisma = new PrismaClient(); //creo el cliente de prisma para poder hacer consultas a la base de datos
+
 
 router.post("/usuarios", async(req, res, next)=>{
     try{
@@ -107,7 +109,11 @@ router.post("/login", async(req, res, next)=>{
 router.post("/cambiar-clave",verificarToken, async(req,res, next)=>{
     try{    
     const {id} = (req as any).usuario;
-    const {contraseñaActual, nuevaContraseña}= req.body;
+    const {contraseñaActual, nuevaContraseña, confirmarContraseña}= req.body;
+
+    if(nuevaContraseña !== confirmarContraseña){
+        return res.status(400).json({error: "Las contraseñas no coinciden."});
+    }
 
     const usuario = await prisma.usuario.findUnique({where: {id}});
 
@@ -137,5 +143,21 @@ router.post("/cambiar-clave",verificarToken, async(req,res, next)=>{
 }
 
 });
+
+
+router.post("/verificar-fortaleza", (req, res, next)=>{
+    try{
+        const {contraseña} = req.body
+
+        const errorContraseña= validarFortalezaPassword(contraseña);
+
+        const puntajeContraseña = calcularFortalezaPassword(contraseña);
+
+        return res.status(200).json({puntajeContraseña,  errorContraseña, valida: errorContraseña===null})
+}catch(error){
+    next(error);
+}
+}
+)
 
 export default router;

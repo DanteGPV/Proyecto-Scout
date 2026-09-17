@@ -209,6 +209,8 @@ model Usuario {
   fecha_creacion          DateTime      @default(now()) @map("fecha_creación") @db.Timestamp(6)
   ultimo_login            DateTime?     @map("último_login") @db.Timestamp(6)
   debe_cambiar_contrasena Boolean?      @default(true) @map("debe_cambiar_contraseña")
+  totp_secret             String[]      @db.VarChar
+  totp_activado           Boolean?      @default(false)
   Miembro_Scout           Miembro_Scout @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
 }
 
