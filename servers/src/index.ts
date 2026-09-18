@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import helmet from "helmet";
 import { errorHandler } from "./middleware/errorHandler";
 import authRoutes from "./routes/auth";
 import miembrosRoutes from "./routes/miembros";
@@ -9,6 +10,7 @@ import ramasRoutes from "./routes/ramas";
 const app = express();
 const PORT = 3000;
 
+app.use(helmet());
 app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/miembros", miembrosRoutes);

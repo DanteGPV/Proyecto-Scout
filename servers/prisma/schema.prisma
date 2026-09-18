@@ -202,16 +202,17 @@ model TipoInsignia {
 }
 
 model Usuario {
-  id                      BigInt        @id @default(autoincrement())
+  id                      BigInt              @id @default(autoincrement())
   id_miembro              BigInt
-  email                   String        @unique(map: "email_único") @db.VarChar(255)
-  hash_contrasena         String        @map("hash_contraseña") @db.VarChar(255)
-  fecha_creacion          DateTime      @default(now()) @map("fecha_creación") @db.Timestamp(6)
-  ultimo_login            DateTime?     @map("último_login") @db.Timestamp(6)
-  debe_cambiar_contrasena Boolean?      @default(true) @map("debe_cambiar_contraseña")
-  totp_secret             String[]      @db.VarChar
-  totp_activado           Boolean?      @default(false)
-  Miembro_Scout           Miembro_Scout @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
+  email                   String              @unique(map: "email_único") @db.VarChar(255)
+  hash_contrasena         String              @map("hash_contraseña") @db.VarChar(255)
+  fecha_creacion          DateTime            @default(now()) @map("fecha_creación") @db.Timestamp(6)
+  ultimo_login            DateTime?           @map("último_login") @db.Timestamp(6)
+  debe_cambiar_contrasena Boolean?            @default(true) @map("debe_cambiar_contraseña")
+  totp_activado           Boolean?            @default(false)
+  totp_secret             String?             @db.VarChar(255)
+  tokenRecuperacions      TokenRecuperacion[]
+  Miembro_Scout           Miembro_Scout       @relation(fields: [id_miembro], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_miembro")
 }
 
 model faseEspecialidad {
@@ -233,4 +234,17 @@ model rol {
   id_rama    Int?
   MiembroRol MiembroRol[]
   Rama       Rama?        @relation(fields: [id_rama], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "id_rama")
+}
+
+model TokenRecuperacion {
+  id         BigInt   @id @default(autoincrement())
+  id_usuario BigInt
+  token      String   @unique @db.VarChar(255)
+  expira     DateTime @db.Timestamp(6)
+  usado      Boolean  @default(false)
+  creado     DateTime @default(now()) @db.Timestamp(6)
+  Usuario    Usuario  @relation(fields: [id_usuario], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_token_recuperacion_usuario")
+
+  @@index([expira], map: "idx_token_recuperacion_expira")
+  @@index([id_usuario], map: "idx_token_recuperacion_usuario")
 }
