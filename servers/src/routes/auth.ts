@@ -1,13 +1,16 @@
 import { Prisma, PrismaClient } from "@prisma/client"; //importo el cliente de prisma para poder hacer consultas a la base de datos
 import bcrypt from "bcrypt"; //para hashear contraseñas
+import crypto from "crypto";
 import { Router } from "express"; //importo el router de express para poder crear rutas
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken"; //para generar tokens de autenticación
 import QRcode from "qrcode";
 import speakeasy from "speakeasy";
 import { verificarToken } from "../middleware/auth_middleware"; //importo el middleware para verificar el token de autenticación
-import { calcularFortalezaPassword, validarFortalezaPassword } from "../utils/auth_utils";
+import { calcularFortalezaPassword, hashearPassword, validarFortalezaPassword, validarNuevaPassword } from "../utils/auth_utils";
+import { enviarEmailRecuperacion } from "../utils/email";
 import { validarEdadParaRama } from "../utils/validarEdadRama";
+
 
 const router = Router(); //creo el router de express para poder crear rutas
 const prisma = new PrismaClient(); //creo el cliente de prisma para poder hacer consultas a la base de datos
@@ -38,7 +41,7 @@ router.post("/usuarios", async(req, res, next)=>{
         }
         
         //Creo el hash para la contraseña temporal que dió el Jefe Scout al usuario
-        const hash = await bcrypt.hash(contraseñaTemporal, 10);
+        const hash = await hashearPassword(contraseñaTemporal);
 
         //Creo el Usuario y el miembro scout usando Prisma ORM que se conecta con PostgreSQL. uso el metodo $transaction de prisma que asegura que al crear las dos instancias en este caso no haya ningun error, y así seguir con el proceso. indicó tambien que debe cambiar contraseña.
         const resultado = await prisma.$transaction(async(tx : Prisma.TransactionClient) =>{
@@ -135,9 +138,10 @@ router.post("/cambiar-clave",verificarToken, async(req,res, next)=>{
     const {id} = (req as any).usuario;
     const {contraseñaActual, nuevaContraseña, confirmarContraseña}= req.body;
 
-    if(nuevaContraseña !== confirmarContraseña){
-        return res.status(400).json({error: "Las contraseñas no coinciden."});
-    }
+    const errorPassword = validarNuevaPassword(nuevaContraseña, confirmarContraseña);
+    if (errorPassword) {
+     return res.status(400).json({ error: errorPassword });
+    }   
 
     const usuario = await prisma.usuario.findUnique({where: {id}});
 
@@ -151,7 +155,7 @@ router.post("/cambiar-clave",verificarToken, async(req,res, next)=>{
             return res.status(401).json({error:"La contraseña actual es incorrecta."});
         }
     }  
-    const hash= await bcrypt.hash(nuevaContraseña, 10);
+    const hash= await hashearPassword(nuevaContraseña);
 
     await prisma.usuario.update({
         where: {id},
@@ -260,6 +264,66 @@ router.post("/2fa/desactivar", verificarToken, async (req, res, next) => {
       where: { id },
       data: { totp_activado: false, totp_secret: null },
     });
+
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/recuperar-clave", async(req, res, next)=>{
+    try{
+    const {email}= req.body;
+    const usuario = await prisma.usuario.findUnique({where: {email}});
+
+    if(!usuario){
+        return res.json({ok: true, mensaje: "si el mail existe, se envió un correo"});
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expira = new Date(Date.now() + 60*60*100);
+
+    await prisma.tokenRecuperacion.create({
+        data: {id_usuario: usuario.id, token, expira}
+    })
+
+    const link =`https://app.com/resetar?token=${token}`;
+
+    await enviarEmailRecuperacion(email, link);
+
+    res.json({ ok: true, mensaje: "Si el email existe, se envió un correo" });
+    }catch (error) {
+    next(error);
+  }
+})
+
+router.post("/resetear-clave", async (req, res, next) => {
+  try {
+    const { token, nuevaContraseña, confirmarContraseña } = req.body;
+
+    const errorPassword = validarNuevaPassword(nuevaContraseña, confirmarContraseña);
+    if (errorPassword) {
+     return res.status(400).json({ error: errorPassword });
+    }
+
+    const registro = await prisma.tokenRecuperacion.findUnique({ where: { token } });
+
+    if (!registro || registro.usado || registro.expira < new Date()) {
+      return res.status(400).json({ error: "El enlace de recuperación es inválido o expiró" });
+    }
+
+    const hash = await hashearPassword(nuevaContraseña);
+
+    await prisma.$transaction([
+      prisma.usuario.update({
+        where: { id: registro.id_usuario },
+        data: { hash_contrasena: hash, debe_cambiar_contraseña: false },
+      }),
+      prisma.tokenRecuperacion.update({
+        where: { id: registro.id },
+        data: { usado: true },
+      }),
+    ]);
 
     res.json({ ok: true });
   } catch (error) {

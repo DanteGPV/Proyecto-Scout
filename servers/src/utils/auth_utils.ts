@@ -1,3 +1,9 @@
+import bcrypt from "bcrypt";
+
+export async function hashearPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
+}
+
 export function validarFortalezaPassword(password: string): string | null {
   if (password.length < 8) {
     return "La contraseña debe tener al menos 8 caracteres";
@@ -27,4 +33,20 @@ export function calcularFortalezaPassword(password: string): "debil" | "media" |
   if (puntos <= 2) return "debil";
   if (puntos <= 4) return "media";
   return "fuerte";
+}
+
+export function validarNuevaPassword(
+  nuevaContraseña: string,
+  confirmarContraseña: string
+): string | null {
+  if (nuevaContraseña !== confirmarContraseña) {
+    return "Las contraseñas no coinciden";
+  }
+
+  const errorFortaleza = validarFortalezaPassword(nuevaContraseña);
+  if (errorFortaleza) {
+    return errorFortaleza;
+  }
+
+  return null;
 }
