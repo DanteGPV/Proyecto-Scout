@@ -317,7 +317,7 @@ router.post("/resetear-clave", async (req, res, next) => {
     await prisma.$transaction([
       prisma.usuario.update({
         where: { id: registro.id_usuario },
-        data: { hash_contrasena: hash, debe_cambiar_contraseña: false },
+        data: { hash_contrasena: hash, debe_cambiar_contrasena: false },
       }),
       prisma.tokenRecuperacion.update({
         where: { id: registro.id },

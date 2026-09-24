@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { Router } from "express";
 import { verificarToken } from "../middleware/auth_middleware";
+import { upload } from "../middleware/upload";
+import { subirImagenACloudinary } from "../utils/cloudinary";
 import { validarEdadParaRama } from "../utils/validarEdadRama";
 
 
@@ -159,3 +161,25 @@ router.patch("/:id/estado", verificarToken, async(req,res, next)=>{
     }
 })
 export default router;
+
+router.post("/:id/foto", verificarToken, upload.single("imagen"), async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No se envió ninguna imagen" });
+    }
+
+    const imagen_url = await subirImagenACloudinary(req.file.buffer, "domus/miembros");
+
+    const miembro = await prisma.miembro_Scout.update({
+      where: { id },
+      data: { imagen_url },
+      select: { id: true, nombre: true, apellido: true, imagen_url: true },
+    });
+
+    res.json({ ...miembro, id: Number(miembro.id) });
+  } catch (error) {
+    next(error);
+  }
+});
